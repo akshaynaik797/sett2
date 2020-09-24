@@ -43,11 +43,25 @@ def process_values(fromtime, totime, insname):
             r = cur.fetchall()
             if r is not None:
                 for row in r:
-                    record.append(check_and_download_attachment(str(row[0]), row[1], row[2], row[4]))
-                    for i in record:
-                        with open("records.csv", "a+") as fp:
-                            i = str(i).replace("(", "").replace(")", "")
-                            fp.write(i+'\n')
+                    if os.path.exists(row[5]):
+                        dst_directory = 'backups/'
+                        date_time = datetime.now().strftime("%m%d%Y%H%M%S")
+                        finaldirectory = dst_directory + row[1] + '_' + date_time
+                        if not os.path.exists(dst_directory):
+                            os.mkdir(dst_directory)
+                        if not os.path.exists(finaldirectory):
+                            os.mkdir(finaldirectory)
+                        shutil.copy(row[5], finaldirectory)
+                        temp = row[0], '1', row[1], row[2], row[4]
+                        temp = str(temp).replace("(", "").replace(")", "")
+                        record.append(temp)
+                    else:
+                        # record.append(check_and_download_attachment(str(row[0]), row[1], row[2], row[4]))
+                        pass
+                for i in record:
+                    with open("records.csv", "a+") as fp:
+                        i = str(i).replace("(", "").replace(")", "")
+                        fp.write(i + '\n')
             pass
     except:
         log_exceptions()
