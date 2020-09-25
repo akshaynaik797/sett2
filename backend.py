@@ -3,29 +3,24 @@ import imaplib
 import os
 import shutil
 import sqlite3
+import re
+import subprocess
 from datetime import datetime
 
 import pdfkit
 
 from make_log import log_exceptions
+from movemaster import move_master_to_master_insurer
 
-db, folder = 'database1.db', 'temp/'
 
+db, folder, dst_directory, directory = 'database1.db', 'temp/', 'backups/', 'backups'
+
+inslist = ('all', 'aditya', 'apollo', 'bajaj', 'big', 'east_west', 'fgh', 'fhpl', 'Good_health', 'hdfc',
+           'health_heritage', 'health_india', 'health_insurance', 'icici_lombard', 'MDINDIA', 'Medi_Assist',
+           'Medsave', 'Paramount', 'Raksha', 'reliance', 'religare', 'small', 'united', 'Universal_Sompo',
+           'vidal', 'vipul')
 
 def process_values(fromtime, totime, insname):
-    """
-    1.Accept values
-    2.Get table of insname, hospital, subject, attachment path
-    3.Check if file exists in attachment path
-    4.If exists then call make_excel
-    5.If not exists then call check_and_download_attachment
-    6.Download attachment and call make_excel
-    7.if excel created then call process_insurer_pdfs
-    :param fromtime:
-    :param totime:
-    :param insname:
-    :return:
-    """
     try:
         record = []
         if insname != 'all':
@@ -44,7 +39,6 @@ def process_values(fromtime, totime, insname):
             if r is not None:
                 for row in r:
                     if os.path.exists(row[5]):
-                        dst_directory = 'backups/'
                         date_time = datetime.now().strftime("%m%d%Y%H%M%S")
                         finaldirectory = dst_directory + row[1] + '_' + date_time
                         if not os.path.exists(dst_directory):
@@ -56,13 +50,16 @@ def process_values(fromtime, totime, insname):
                         temp = str(temp).replace("(", "").replace(")", "")
                         record.append(temp)
                     else:
-                        # record.append(check_and_download_attachment(str(row[0]), row[1], row[2], row[4]))
-                        pass
+                        record.append(check_and_download_attachment(str(row[0]), row[1], row[2], row[4]))
+                with open("records.csv", "a+") as fp:
+                    row = "row no, no of files, insurer, hospital, Email Subject\n"
+                    fp.write(row)
                 for i in record:
                     with open("records.csv", "a+") as fp:
                         i = str(i).replace("(", "").replace(")", "")
                         fp.write(i + '\n')
             pass
+        accept_values(fromtime, datetime.now().strftime("%d/%m/%Y %H:%M:%S"), insname)
     except:
         log_exceptions()
         pass
@@ -73,7 +70,6 @@ def check_and_download_attachment(row_no, insname, hospital, subject):
     try:
         shutil.rmtree(folder, ignore_errors=True)
         os.mkdir(folder)
-        dst_directory = 'backups/'
         date_time = datetime.now().strftime("%m%d%Y%H%M%S")
         finaldirectory = dst_directory + insname + '_' + date_time
         if not os.path.exists(dst_directory):
@@ -130,6 +126,110 @@ def check_and_download_attachment(row_no, insname, hospital, subject):
     except:
         log_exceptions(subject=subject)
         return row_no, flag, insname, hospital, subject
+
+
+def accept_values(fromtime, totime, insname):
+    fromtime = datetime.strptime(fromtime, '%d/%m/%Y %H:%M:%S')
+    totime = datetime.strptime(totime, '%d/%m/%Y %H:%M:%S')
+    if insname == 'all':
+        for i in inslist:
+            if collect_folder_data(fromtime, totime, i):
+                print(f'{i} completed')
+            else:
+                print(f'{i} incomplete')
+        return True
+    elif collect_folder_data(fromtime, totime, insname):
+        return True
+    return False
+
+
+def collect_folder_data(fromtime, totime, insname):
+    regex = r'(?P<name>.*(?=_\d+))_(?P<date>\d+)'
+    for x in os.walk(directory):
+        for y in x[1]:
+            if insname in y:
+                result = re.compile(regex).search(y)
+                if result is not None:
+                    tempdict = result.groupdict()
+                    folder_insname, foldertime = tempdict['name'], datetime.strptime(tempdict['date'], '%m%d%Y%H%M%S')
+                    if fromtime < foldertime < totime and folder_insname == insname:
+                        print(f'processing {y}')
+                        process_insurer_excel(y, insname, foldertime)
+            elif 'star' in y:
+                result = re.compile(regex).search(y)
+                if result is not None:
+                    tempdict = result.groupdict()
+                    folder_insname, foldertime = tempdict['name'], datetime.strptime(tempdict['date'], '%m%d%Y%H%M%S')
+                    if fromtime < foldertime < totime and folder_insname == 'star':
+                        if insname == 'big' or insname == 'small':
+                            print(f'processing {y}')
+                            process_insurer_excel(y, insname, foldertime)
+
+        break
+    return True
+
+
+def process_insurer_excel(folder_name, insname, foldertime):
+    for root, dirs, files in os.walk(directory + '/' + folder_name):
+        flag = 0
+        for file in files:
+            path = (os.path.join(root, file))
+            if 'smallinamdar.xlsx' in file:
+                op = 'mediclaim@inamdarhospital.org Mediclaim@2019 imap.gmail.com inamdar hospital'
+                subprocess.run(["python", "make_master.py", 'small_star', op, '', path])
+                move_master_to_master_insurer('')
+                print(f'processed {path}')
+                flag = 1
+                break
+            elif 'smallMax.xlsx' in file:
+                op = 'Tpappg@maxhealthcare.com May@2020 outlook.office365.com Max PPT'
+                subprocess.run(["python", "make_master.py", 'small_star', op, '', path])
+                move_master_to_master_insurer('')
+                print(f'processed {path}')
+                flag = 1
+                break
+            elif 'starinamdar.xlsx' in file:
+                op = 'mediclaim@inamdarhospital.org Mediclaim@2019 imap.gmail.com inamdar hospital'
+                subprocess.run(["python", "make_master.py", 'star', op, '', path])
+                move_master_to_master_insurer('')
+                print(f'processed {path}')
+                flag = 1
+                break
+            elif 'starMax.xlsx' in file:
+                op = 'Tpappg@maxhealthcare.com May@2020 outlook.office365.com Max PPT'
+                subprocess.run(["python", "make_master.py", 'star', op, '', path])
+                move_master_to_master_insurer('')
+                print(f'processed {path}')
+                flag = 1
+                break
+            elif 'Max.xlsx' in file:
+                op = 'Tpappg@maxhealthcare.com May@2020 outlook.office365.com Max PPT'
+                subprocess.run(["python", "make_master.py", insname, op, '', path])
+                move_master_to_master_insurer('')
+                print(f'processed {path}')
+                flag = 1
+                break
+            elif 'inamdar.xlsx' in file:
+                op = 'mediclaim@inamdarhospital.org Mediclaim@2019 imap.gmail.com inamdar hospital'
+                subprocess.run(["python", "make_master.py", insname, op, '', path])
+                move_master_to_master_insurer('')
+                print(f'processed {path}')
+                flag = 1
+                break
+        if flag == 0:
+            # code for 2nd condtion
+            process_insurer_pdfs(folder_name, insname, files)
+            pass
+    pass
+
+
+def process_insurer_pdfs(folder_name, insname, files):
+    for f in files:
+        if '.pdf' in f:
+            fpath = directory + '/' + folder_name + '/' + f
+            subprocess.run(["python", "make_insurer_excel.py", insname, fpath])
+        pass
+    pass
 
 
 if __name__ == "__main__":
