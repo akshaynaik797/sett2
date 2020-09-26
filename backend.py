@@ -51,6 +51,8 @@ def process_values(fromtime, totime, insname):
                         record.append(temp)
                     else:
                         record.append(check_and_download_attachment(str(row[0]), row[1], row[2], row[4]))
+                if os.path.exists("records.csv"):
+                    os.remove("records.csv")
                 with open("records.csv", "a+") as fp:
                     row = "row no, no of files, insurer, hospital, Email Subject\n"
                     fp.write(row)
@@ -58,11 +60,11 @@ def process_values(fromtime, totime, insname):
                     with open("records.csv", "a+") as fp:
                         i = str(i).replace("(", "").replace(")", "")
                         fp.write(i + '\n')
-            pass
-        accept_values(fromtime, datetime.now().strftime("%d/%m/%Y %H:%M:%S"), insname)
+        # accept_values(fromtime, datetime.now().strftime("%d/%m/%Y %H:%M:%S"), insname)
+        return True
     except:
         log_exceptions()
-        pass
+        return False
 
 
 def check_and_download_attachment(row_no, insname, hospital, subject):

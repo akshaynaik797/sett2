@@ -1,5 +1,6 @@
+from datetime import datetime
 from tkinter import Tk, Label, Entry, StringVar, Button, ttk, messagebox
-from backend import process_values
+from backend import process_values, accept_values
 
 my_date = ''
 mygui = Tk(className='Process Failed Settlements')
@@ -33,6 +34,17 @@ def send_values():
     if fromtime.get() != '' and totime.get() != '' and insname.get() != '':
         result = process_values(fromtime.get(), totime.get(), insname.get())
         if result is True:
+            print('Report generated')
+            messagebox.showinfo(title='Success', message='Report generated')
+        else:
+            messagebox.showerror(title='Error', message='Job failed, see logs')
+    else:
+        messagebox.showerror(title="Error", message='Enter values in all fields')
+
+def process_pdfs():
+    if fromtime.get() != '' and totime.get() != '' and insname.get() != '':
+        result = accept_values(fromtime.get(), datetime.now().strftime("%d/%m/%Y %H:%M:%S"), insname.get())
+        if result is True:
             print('Job finished')
             messagebox.showinfo(title='Success', message='Job finished')
         else:
@@ -40,6 +52,8 @@ def send_values():
     else:
         messagebox.showerror(title="Error", message='Enter values in all fields')
 
-loginButton = Button(mygui, text="Submit", command=send_values).grid(row=5, column=0)
-closeButton = Button(mygui, text="Close", command=mygui.destroy).grid(row=5, column=1)
+
+loginButton = Button(mygui, text="Check", command=send_values).grid(row=5, column=0)
+closeButton = Button(mygui, text="Close", command=mygui.destroy).grid(row=5, column=2)
+processButton = Button(mygui, text="Process", command=process_pdfs).grid(row=5, column=1)
 mygui.mainloop()
