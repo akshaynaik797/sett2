@@ -236,6 +236,6 @@ def process_insurer_pdfs(folder_name, insname, files):
 
 if __name__ == "__main__":
     process_values('01/08/2020', '18/09/2020', 'all')
-    # a = check_and_download_attachment('12', 'Raksha', 'Max',
-    #                               "Claim Settlement Letter From Raksha Health Insurance TPA Pvt.Ltd. (M58ADD676ILBS,9331198,Dr. Aditi Goel.)")
+    a = check_and_download_attachment('12', 'Raksha', 'Max',
+                                  "Claim Settlement Letter From Raksha Health Insurance TPA Pvt.Ltd. (M58ADD676ILBS,9331198,Dr. Aditi Goel.)")
     pass
